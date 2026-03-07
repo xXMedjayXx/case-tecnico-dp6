@@ -1,54 +1,69 @@
-// =====================================================
-// CONFIGURAÇÃO INICIAL
-// Stream ID GA4: G-096NHNN8Q2
-// =====================================================
-
 (function() {
-  // Configuração inicial
+  // Configuração inicial com parâmetros para desabilitar detecção automática
   window.dataLayer = window.dataLayer || [];
   window.gtag = function(){dataLayer.push(arguments);}
   gtag('js', new Date());
-  gtag('config', 'G-096NHNN8Q2', { page_location: location.href });
+  gtag('config', 'G-096NHNN8Q2', { 
+    page_location: location.href,
+    send_page_view: true, // Mantém o page_view
+    allow_google_signals: false, // Reduz rastreamento automático
+    allow_ad_personalization_signals: false,
+    link_attribution: false, // Desabilita atribuição automática de links
+    linker: {
+      accept_incoming: false,
+      decorate_forms: false
+    }
+  });
 
-  // Helper function para tracking unificado
-  function trackEvent(eventType, extraParams = {}) {
-    const baseParams = {
+  // Função para enviar apenas eventos personalizados
+  function sendCustomEvent(eventName, eventParams = {}) {
+    const finalParams = {
       page_location: location.href,
-      ...extraParams
+      ...eventParams,
+      // Adiciona prefixo para identificar eventos manuais
+      custom_event: 'true'
     };
     
-    // Dispara para ambos os sistemas
-    gtag('event', eventType, baseParams);
-    dataLayer.push({ event: eventType, ...baseParams });
+    // Envia apenas via gtag (o dataLayer recebe automaticamente)
+    gtag('event', eventName, finalParams);
   }
 
-  // Inicializa após carregamento da página
   document.addEventListener('DOMContentLoaded', () => {
     
-    // Menu tracking
+    // Menu tracking - eventos personalizados
     const menuMap = {
-      '.menu-lista-contato': { name: 'entre_em_contato', group: 'menu' },
-      '.menu-lista-download': { name: 'download_pdf', group: 'menu' }
+      '.menu-lista-contato': { name: 'entre_em_contato', group: 'menu', event: 'click' },
+      '.menu-lista-download': { name: 'download_pdf', group: 'menu', event: 'file_download' }
     };
 
     Object.entries(menuMap).forEach(([selector, data]) => {
       const element = document.querySelector(selector);
       if (element) {
-        element.addEventListener('click', () => {
-          trackEvent('click', {
+        element.addEventListener('click', (e) => {
+          e.preventDefault(); // Previne ação padrão que pode disparar eventos automáticos
+          
+          sendCustomEvent(data.event, {
             element_name: data.name,
-            element_group: data.group
+            element_group: data.group,
+            link_text: element.textContent?.trim() || '',
+            link_url: element.href || ''
           });
+
+          // Redireciona manualmente após o tracking
+          if (element.href && data.name === 'download_pdf') {
+            setTimeout(() => { window.location.href = element.href; }, 150);
+          }
         });
       }
     });
 
     // Cards "Ver Mais"
     document.querySelectorAll('.card-montadoras').forEach(card => {
-      card.addEventListener('click', function() {
-        trackEvent('click', {
+      card.addEventListener('click', function(e) {
+        sendCustomEvent('click', {
           element_name: this.dataset.id || 'sem_id',
-          element_group: 'ver_mais'
+          element_group: 'ver_mais',
+          card_title: this.querySelector('h3')?.textContent?.trim() || ''
         });
       });
     });
@@ -67,35 +82,55 @@
           input.addEventListener('input', () => {
             if (!formStarted) {
               formStarted = true;
-              trackEvent('form_start', { form_id: formId, form_name: formName, form_destination: formDestination });
+              sendCustomEvent('form_start', { 
+                form_id: formId, 
+                form_name: formName, 
+                form_destination: formDestination 
+              });
             }
           });
         });
 
       // Submissão
-      form.addEventListener('submit', () => {
+      form.addEventListener('submit', (e) => {
         const submitText = form.querySelector('button[type="submit"]')?.textContent?.trim() || 'Enviar';
-        trackEvent('form_submit', {
+        sendCustomEvent('form_submit', {
           form_id: formId,
           form_name: formName,
           form_destination: formDestination,
           form_submit_text: submitText
         });
+        // Permite o envio normal do formulário
       });
 
-      // Sucesso (popup)
-      const checkSuccess = setInterval(() => {
-        if (document.body.classList.contains('lightbox-open') && 
-            document.querySelector('.lightbox-title')?.textContent === 'Contato enviado') {
-          trackEvent('view_form_success', { form_id: formId, form_name: formName });
-          clearInterval(checkSuccess);
-          
-          // Reset após 1s
-          setTimeout(() => {
-            formStarted = false;
-          }, 1000);
-        }
-      }, 500);
+      // Sucesso (popup) - Usando MutationObserver mais específico
+      if (typeof MutationObserver !== 'undefined') {
+        let successFired = false;
+        const observer = new MutationObserver((mutations) => {
+          mutations.forEach((mutation) => {
+            if (!successFired && document.body.classList.contains('lightbox-open')) {
+              const title = document.querySelector('.lightbox-title');
+              if (title && title.textContent === 'Contato enviado') {
+                successFired = true;
+                sendCustomEvent('view_form_success', { 
+                  form_id: formId, 
+                  form_name: formName 
+                });
+                
+                setTimeout(() => {
+                  successFired = false;
+                  formStarted = false;
+                }, 1000);
+              }
+            }
+          });
+        });
+
+        observer.observe(document.body, {
+          attributes: true,
+          attributeFilter: ['class']
+        });
+      }
     }
   });
 })();
