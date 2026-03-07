@@ -28,7 +28,7 @@ function dispararEvento(eventName, eventData) {
 
 document.addEventListener('DOMContentLoaded', function() {
 
-  // Evento: Click - "Entre em Contato"
+  // Evento: Click - Menu entrar em contato
   var btnContato = document.querySelector('.menu-lista-contato');
   if (btnContato) {
     btnContato.addEventListener('click', function() {
@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // Evento: file_download - "Download PDF"
+  // Evento: file_download - Download PDF
   var btnDownload = document.querySelector('.menu-lista-download');
   if (btnDownload) {
     btnDownload.addEventListener('click', function() {
@@ -63,9 +63,9 @@ document.addEventListener('DOMContentLoaded', function() {
   // =====================================================
 
   // Evento: Click - Botões "Ver Mais" (Lorem, Ipsum, Dolor)
-  var cardsVermais = document.querySelectorAll('.card-montadoras');
-  if (cardsVermais.length > 0) {
-    cardsVermais.forEach(function(card) {
+  var conteudos = document.querySelectorAll('.card-montadoras');
+  if (conteudos.length > 0) {
+    conteudos.forEach(function(card) {
       card.addEventListener('click', function() {
         var elementName = this.getAttribute('data-id'); // lorem, ipsum ou dolor
         
@@ -95,10 +95,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Captura informações do formulário
-    var formName = formContato.name;
+    var formName = formContato.name || 'contato';
     var formDestination = formContato.action || window.location.href;
 
-    // Evento: form_start - Primeiro campo preenchido
+    // Evento: form_start
     var camposInput = formContato.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"]');
 
     camposInput.forEach(function(campo) {
@@ -121,7 +121,7 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     });
 
-    // Evento: form_submit - Envio do formulário
+    // Evento: form_submit
     formContato.addEventListener('submit', function(e) {
       var formId = getFormId();
       var btnSubmit = formContato.querySelector('button[type="submit"]');
@@ -139,8 +139,8 @@ document.addEventListener('DOMContentLoaded', function() {
       dispararEvento(eventName, eventData);
     });
 
-    // Evento: view_form_success - Popup de sucesso
-    var successFired = false; // Flag para evitar disparo múltiplo
+    // Evento: view_form_success
+    var successFired = false; // Evitar disparo duplicado
 
     var observer = new MutationObserver(function(mutations) {
       mutations.forEach(function(mutation) {
