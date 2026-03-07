@@ -1,36 +1,35 @@
 (function() {
-  // Configuração inicial com parâmetros para desabilitar detecção automática
+  // Configuração inicial
   window.dataLayer = window.dataLayer || [];
   window.gtag = function(){dataLayer.push(arguments);}
   gtag('js', new Date());
   gtag('config', 'G-096NHNN8Q2', { 
     page_location: location.href,
-    send_page_view: true, // Mantém o page_view
-    allow_google_signals: false, // Reduz rastreamento automático
+    send_page_view: true,
+    allow_google_signals: false,
     allow_ad_personalization_signals: false,
-    link_attribution: false, // Desabilita atribuição automática de links
+    link_attribution: false,
     linker: {
       accept_incoming: false,
       decorate_forms: false
     }
   });
 
-  // Função para enviar apenas eventos personalizados
+  // Função para enviar eventos com page_location explícito
   function sendCustomEvent(eventName, eventParams = {}) {
     const finalParams = {
-      page_location: location.href,
+      page_location: location.href, // Força page_location em cada evento
+      link_attribution: 'false',
       ...eventParams,
-      // Adiciona prefixo para identificar eventos manuais
       custom_event: 'true'
     };
     
-    // Envia apenas via gtag (o dataLayer recebe automaticamente)
     gtag('event', eventName, finalParams);
   }
 
   document.addEventListener('DOMContentLoaded', () => {
     
-    // Menu tracking - eventos personalizados
+    // Menu tracking
     const menuMap = {
       '.menu-lista-contato': { name: 'entre_em_contato', group: 'menu', event: 'click' },
       '.menu-lista-download': { name: 'download_pdf', group: 'menu', event: 'file_download' }
@@ -40,7 +39,7 @@
       const element = document.querySelector(selector);
       if (element) {
         element.addEventListener('click', (e) => {
-          e.preventDefault(); // Previne ação padrão que pode disparar eventos automáticos
+          e.preventDefault();
           
           sendCustomEvent(data.event, {
             element_name: data.name,
@@ -49,7 +48,6 @@
             link_url: element.href || ''
           });
 
-          // Redireciona manualmente após o tracking
           if (element.href && data.name === 'download_pdf') {
             setTimeout(() => { window.location.href = element.href; }, 150);
           }
@@ -73,7 +71,7 @@
     if (form) {
       let formStarted = false;
       const formId = form.id || 'sem_id';
-      const formName = form.name || '';
+      const formName = form.name || 'contato';
       const formDestination = form.action || location.href;
 
       // Início do preenchimento
@@ -94,16 +92,18 @@
       // Submissão
       form.addEventListener('submit', (e) => {
         const submitText = form.querySelector('button[type="submit"]')?.textContent?.trim() || 'Enviar';
+        
         sendCustomEvent('form_submit', {
           form_id: formId,
           form_name: formName,
           form_destination: formDestination,
           form_submit_text: submitText
         });
-        // Permite o envio normal do formulário
+        
+        // Não usar preventDefault() para permitir envio normal
       });
 
-      // Sucesso (popup) - Usando MutationObserver mais específico
+      // Sucesso (popup)
       if (typeof MutationObserver !== 'undefined') {
         let successFired = false;
         const observer = new MutationObserver((mutations) => {
@@ -112,9 +112,13 @@
               const title = document.querySelector('.lightbox-title');
               if (title && title.textContent === 'Contato enviado') {
                 successFired = true;
+                
+                // Importante: Capturar a URL atual quando o popup abre
+                const currentUrl = location.href;
+                
                 sendCustomEvent('view_form_success', { 
                   form_id: formId, 
-                  form_name: formName 
+                  form_name: formName,
                 });
                 
                 setTimeout(() => {
